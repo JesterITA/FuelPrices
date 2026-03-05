@@ -3,7 +3,7 @@ name: Update fuel dataset
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 9 * * *"
+    - cron: "0 9 * * *"
 
 permissions:
   contents: write
