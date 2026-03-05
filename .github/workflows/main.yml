@@ -1,0 +1,24 @@
+name: update fuel prices
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: download file
+        run: |
+          curl -L -o prezzo_alle_8.csv https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv
+
+      - name: commit
+        run: |
+          git config user.name "bot"
+          git config user.email "bot@github.com"
+          git add prezzo_alle_8.csv
+          git commit -m "update fuel prices"
+          git push
