@@ -1,23 +1,36 @@
-name: update fuel prices
+name: Update fuel dataset
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * *"
+
+permissions:
+  contents: write
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
-      - name: download file
+      - name: Download dataset
         run: |
           curl -L -o prezzo_alle_8.csv https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv
 
-      - name: commit
+      - name: Commit and push
         run: |
-          git config user.name "bot"
-          git config user.email "bot@github.com"
+          git config user.name "fuel-bot"
+          git config user.email "fuel-bot@users.noreply.github.com"
+
           git add prezzo_alle_8.csv
-          git commit -m "update fuel prices"
-          git push
+
+          # Se non ci sono cambiamenti, esci pulito
+          git diff --cached --quiet && echo "No changes" && exit 0
+
+          git commit -m "update fuel dataset"
+          git push origin HEAD
