@@ -11,6 +11,7 @@ permissions:
 jobs:
   fetch:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,19 +19,58 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Download dataset
+      - name: Download datasets
         run: |
-          curl -L -o prezzo_alle_8.csv https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv
+          set -euo pipefail
+
+          curl -fL --retry 5 --retry-delay 5 \
+            -A "Mozilla/5.0" \
+            -o prezzo_alle_8.csv \
+            "https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv"
+
+          curl -fL --retry 5 --retry-delay 5 \
+            -A "Mozilla/5.0" \
+            -o anagrafica_impianti_attivi.csv \
+            "https://www.mimit.gov.it/images/exportCSV/anagrafica_impianti_attivi.csv"
+
+      - name: Validate downloaded files
+        run: |
+          set -euo pipefail
+
+          test -s prezzo_alle_8.csv
+          test -s anagrafica_impianti_attivi.csv
+
+          # niente HTML o pagine di errore mascherate
+          ! head -n 5 prezzo_alle_8.csv | grep -qi "<html"
+          ! head -n 5 anagrafica_impianti_attivi.csv | grep -qi "<html"
+          ! head -n 5 prezzo_alle_8.csv | grep -qi "<!doctype"
+          ! head -n 5 anagrafica_impianti_attivi.csv | grep -qi "<!doctype"
+
+          # controllo minimo sul contenuto atteso
+          grep -q "idImpianto" prezzo_alle_8.csv
+          grep -q "idImpianto" anagrafica_impianti_attivi.csv
+
+          # stampa qualche riga utile nel log
+          echo "=== PREZZO ALLE 8 ==="
+          head -n 3 prezzo_alle_8.csv || true
+          echo
+          echo "=== ANAGRAFICA ==="
+          head -n 3 anagrafica_impianti_attivi.csv || true
 
       - name: Commit and push
         run: |
+          set -euo pipefail
+
           git config user.name "fuel-bot"
           git config user.email "fuel-bot@users.noreply.github.com"
 
-          git add prezzo_alle_8.csv
+          git add prezzo_alle_8.csv anagrafica_impianti_attivi.csv
 
-          # Se non ci sono cambiamenti, esci pulito
-          git diff --cached --quiet && echo "No changes" && exit 0
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
 
-          git commit -m "update fuel dataset"
+          git commit -m "update fuel datasets"
+          git push origin HEAD
           git push origin HEAD
