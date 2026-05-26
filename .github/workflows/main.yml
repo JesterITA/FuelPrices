@@ -3,10 +3,16 @@ name: Update fuel dataset
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 7 * * *"
+    # GitHub cron è UTC.
+    # 07:37 UTC = 08:37 italiane in inverno / 09:37 in estate.
+    # Minuto non tondo per ridurre code.
+    - cron: "37 7 * * *"
 
 permissions:
   contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   fetch:
@@ -40,17 +46,14 @@ jobs:
           test -s prezzo_alle_8.csv
           test -s anagrafica_impianti_attivi.csv
 
-          # niente HTML o pagine di errore mascherate
           ! head -n 5 prezzo_alle_8.csv | grep -qi "<html"
           ! head -n 5 anagrafica_impianti_attivi.csv | grep -qi "<html"
           ! head -n 5 prezzo_alle_8.csv | grep -qi "<!doctype"
           ! head -n 5 anagrafica_impianti_attivi.csv | grep -qi "<!doctype"
 
-          # controllo minimo sul contenuto atteso
           grep -q "idImpianto" prezzo_alle_8.csv
           grep -q "idImpianto" anagrafica_impianti_attivi.csv
 
-          # stampa qualche riga utile nel log
           echo "=== PREZZO ALLE 8 ==="
           head -n 3 prezzo_alle_8.csv || true
           echo
@@ -72,5 +75,4 @@ jobs:
           fi
 
           git commit -m "update fuel datasets"
-          git push origin HEAD
           git push origin HEAD
